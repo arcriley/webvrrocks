@@ -1,0 +1,335 @@
+{% set site_title = 'WebVR Rocks' %}
+
+{% macro browser_notifications (browser) %}
+  {% if browser.notifications %}
+    {% for message in browser.notifications %}
+      {% if message.enabled != false %}
+        {% set type = message.type if (message.type == 'error' or message.type == 'alert' or message.type == 'success') %}
+        {% set message_id = 'message-' + browser.slug + '-' + loop.index %}
+        {% set order = message.order or message.position or message.rank %}
+        <div class="message{{ ' message-' + type if type }}{{ ' message-dismissable' if message.dismissable }}{{ ' message-pinned' if message.pinned }}" aria-expanded="true" id="{{ message_id }}" data-date-reported="{{ message.datePublished.datetime }}"{% if order %} style="order: {{ order }}"{% endif %}{% if message.dismissable %} data-dismissable="true"{% endif %}{% if message.pinned %} data-pinned="true"{% endif %}>
+          <p>
+            {% if message.datePublished %}
+              <time itemprop="dateReported" datetime="{{ message.datePublished.datetime }}">{{ message.datePublished.pretty or message.datePublished.dateString }}</time>
+            {% endif %}
+
+            {% if message.content_html %}
+              {{ message.content_html|safe }}
+            {% elif message.content %}
+              {{ message.content }}
+            {% else %}
+              {{ message }}
+            {% endif %}
+          </p>
+          {% if message.dismissable %}
+            <a class="close" title="close">&times;</a>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+{% endmacro %}
+
+{% macro author_item (slug, classes, id) %}
+  {% includeData slug + '.json' as person %}
+  <li class="authors__item{% if class %} {{ classes }}{% endif %}"{% if id %} id="{{ id }}"{% endif %}>
+    <span class="authors__item__author" itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <figure>
+        <a class="authors__item__url" href="{{ person.twitter_url }}" itemprop="url"><img itemprop="image" class="authors__item__gravatar" src="{{ person.image }}" alt="{{ person.name }}" width="40"></a>
+        <figcaption><a class="authors__item__url" href="{{ person.twitter_url }}" itemprop="url"><span class="authors__item__url" itemprop="name">{{ person.name }}</span></a> (<a href="{{ person.worksFor.url }}" itemprop="organization">{{ person.worksFor.name }}</a>)</figcaption>
+      </figure>
+    </span>
+  </li>
+{% endmacro %}
+
+{% includeData 'chrome.json' as chrome %}
+{% includeData 'chromium.json' as chromium %}
+{% includeData 'firefox.json' as firefox %}
+{% includeData 'samsung_internet.json' as samsung_internet %}
+{% includeData 'oculus_browser.json' as oculus_browser %}
+{% includeData 'chrome_for_android.json' as chrome_for_android %}
+{% includeData 'microsoft_edge.json' as microsoft_edge %}
+{% includeData 'servo.json' as servo %}
+
+{% includeData 'htc_vive.json' as htc_vive %}
+{% includeData 'samsung_gear_vr.json' as samsung_gear_vr %}
+{% includeData 'google_daydream.json' as google_daydream %}
+{% includeData 'windows_mixed_reality.json' as windows_mixed_reality %}
+
+{% includeData 'demos.json' as demos %}
+
+{# includeData '_db/webvr_scenes.json' as sites #}
+{# includeData '_db/bugs.json' as bugs #}
+{# includeData '_db/compat_reports.json' as compat_reports #}
+{# includeData '_db/people.json' as people #}
+
+{# set db = {
+  sites: sites,
+  bugs: bugs,
+  compat_reports: compat_reports,
+  people: people
+} #}
+
+{% set browsers = {
+  chrome: chrome,
+  chromium: chromium,
+  firefox: firefox,
+  samsung_internet: samsung_internet,
+  oculus_browser: oculus_browser,
+  chrome_for_android: chrome_for_android,
+  microsoft_edge: microsoft_edge,
+  servo: servo
+} %}
+
+{% set headsets = {
+  htc_vive: htc_vive,
+  "oculus_rift": {
+    "name": "Oculus Rift",
+    "about": "/oculus_rift"
+  },
+  samsung_gear_vr: samsung_gear_vr,
+  google_daydream: google_daydream,
+  "google_cardboard": {
+    "name": "Google Cardboard",
+    "about": "/google_cardboard"
+  },
+  windows_mixed_reality: windows_mixed_reality
+} %}
+
+{% set phones = {
+  "samsung_galaxy_note8": {
+    "name": "Samsung Galaxy Note8",
+    "about": "https://www.samsung.com/global/galaxy/galaxy-note8/"
+  },
+  "samsung_galaxy_s8": {
+    "name": "Samsung Galaxy S8",
+    "about": "https://www.samsung.com/global/galaxy/gallery/galaxy-s8/"
+  },
+  "samsung_galaxy_s8_plus": {
+    "name": "Samsung Galaxy S8+",
+    "about": "https://www.samsung.com/global/galaxy/gallery/galaxy-s8/"
+  },
+  "samsung_galaxy_s7": {
+    "name": "Samsung Galaxy S7",
+    "about": "https://www.samsung.com/global/galaxy/gallery/galaxy-s7/"
+  },
+  "samsung_galaxy_s7_edge": {
+    "name": "Samsung Galaxy S7 Edge",
+    "about": "https://www.samsung.com/global/galaxy/gallery/galaxy-s7/"
+  },
+  "samsung_galaxy_note5": {
+    "name": "Samsung Galaxy Note5",
+    "about": "http://www.samsung.com/global/galaxy/galaxy-note5/"
+  },
+  "samsung_galaxy_s6_edge_plus": {
+    "name": "Samsung Galaxy S6 Edge+",
+    "about": "http://www.samsung.com/global/galaxy/galaxy-s6-edge-plus/"
+  },
+  "samsung_galaxy_s6": {
+    "name": "Samsung Galaxy S6",
+    "about": "http://www.samsung.com/global/galaxy/galaxys6/galaxy-s6/"
+  },
+  "samsung_galaxy_s6_edge": {
+    "name": "Samsung Galaxy S6 Edge",
+    "about": "http://www.samsung.com/global/galaxy/galaxys6/galaxy-s6-edge/"
+  }
+} %}
+
+{% macro browser_platform_support (browser, headset, os) %}
+  {% set support = browser.platforms[headset][os] %}
+  {% if support === 'supported' %}
+    {% set classes = 'no-underline supported' %}
+    {% set title = 'Supported' %}
+    {% set text = '✅ <strong>Supported</strong>'|safe %}
+  {% elif support === 'headset_unsupported' %}
+    {% set classes = 'no-underline unsupported headset-unsupported' %}
+    {% set title = 'Unsupported OS by headset maker' %}
+    {% set text = '❌' %}
+  {% elif support === 'browser_unsupported' %}
+    {% set classes = 'no-underline unsupported browser-unsupported' %}
+    {% set title = 'Unsupported browser support' %}
+    {% set text = '❌' %}
+  {% endif %}
+  {% if title %}
+    <a data-support-browser="{{ browser.slug }}" data-support-headset="{{ headset }}" data-support-os="{{ os }}" class="{{ classes }}" title="{{ title }}" href="{{ browser.about }}#{{ os }}">
+      <span>{{ text }}</span>
+    </a>
+  {% endif %}
+{% endmacro %}
+
+{% macro demo_item (slug, classes, idAttr) %}
+  {% set demo = demos[slug] %}
+
+  {% set appType = demo.@type or '--WebApplication' %}
+  {% set appUrl = demo.start_url or demo.url %}
+  {% set appSlug = demo.slug or slug %}
+
+  {% set demoIdAttr = idAttr or appSlug %}
+  {% set appIcon = demo.icons[0] %}
+
+  <li itemprop="demo" itemscope itemtype="http://schema.org/{{ appType }}" data-app-type="{{ appType }}" data-slug="{{ appSlug }}" class="grid-flex-cell-1of2{% if classes %} {{ classes }}{% endif %}"{% if demoIdAttr %} id="{{ demoIdAttr }}"{% endif %}>
+    <div>
+      <div itemprop="details" class="demo-details">
+        <a itemprop="url" href="{{ appUrl }}" class="no-underline" data-href="{{ appUrl }}">
+          <div itemprop="image"{% if appIcon %} style="background-image: url({{ appIcon.src }}){%-
+              if appIcon.background_size -%}; background-size: {{ appIcon.background_size }}
+            {%- endif %}"{% endif %}>
+          </div>
+          <span itemprop="name" class="demo-name">{{ demo.name }}</span>
+        </a>
+        {% if demo.description -%}
+          <span itemprop="description">{{ demo.description }}</span>
+        {%- endif %}
+      </div>
+    </div>
+  </li>
+{% endmacro %}
+
+{% macro browser_item (slug, classes, id) %}
+  {% set browser = browsers[slug] %}
+  {% if not browser %}
+    {% includeData slug + '.json' as browser %}
+  {% endif %}
+  {% set slug = browser.slug or slug %}
+  <li itemprop="browser" itemscope itemtype="http://schema.org/{{ browser.@type }}" data-app-type="{{ browser.@type }}" data-slug="{{ slug }}" class="grid-flex-cell-1of2{% if class %} {{ classes }}{% endif %}" {% if id %} id="{{ id }}"{% endif %}>
+    <div>
+      <div itemprop="details" class="browser-details">
+        <a itemprop="url" href="{{ browser.about }}" class="no-underline">
+          <div itemprop="image" style="background-image: url({{ browser.logo }})">
+          </div>
+          <span itemprop="name" class="browser-name">{{ browser.name }}</span>
+        </a>
+        <span itemprop="description">{{ (browser.description_html or browser.description)|safe }}</span>
+      </div>
+
+      {% set supported_headsets = [] %}
+      {% set supported_platforms = [] %}
+      {% for headset, operating_systems in browser.platforms %}
+        {% for os, support_status in operating_systems %}
+          {% if support_status == 'supported' %}
+            {% if os not in supported_platforms %}
+              {% set supported_platforms = supported_platforms.concat([os]) %}
+            {% endif %}
+            {% if headset not in supported_headsets %}
+              {% set supported_headsets = supported_headsets.concat([headset]) %}
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+
+      <table class="table-support table-with-hover" data-supported-platforms="{{ supported_platforms|join(' ') }}" data-supported-headsets="{{ supported_headsets|join(' ') }}">
+        <thead>
+          <tr>
+            <th></th>
+            <th data-platform="windows"><a class="no-underline" href="/windows"><span class="hidden-text">Windows</span></a></th>
+            <th data-platform="mac"><a class="no-underline" href="/mac"><span class="hidden-text">Mac</span></a></th>
+            <th data-platform="linux"><a class="no-underline" href="/linux"><span class="hidden-text">Linux</span></a></th>
+            <th data-platform="android"><a class="no-underline" href="/android"><span class="hidden-text">Android</span></a></th>
+            <th data-platform="ios"><a class="no-underline" href="/ios"><span class="hidden-text">iOS</span></a></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-headset="htc_vive">
+            <th><a class="no-underline" href="{{ headsets.htc_vive.about }}"><span class="hidden-text">{{ headsets.htc_vive.name }}</span></a></th>
+            <td data-platform="windows">{{ browser_platform_support(browser, 'htc_vive', 'windows') }}</td>
+            <td data-platform="mac">{{ browser_platform_support(browser, 'htc_vive', 'mac') }}</td>
+            <td data-platform="linux">{{ browser_platform_support(browser, 'htc_vive', 'linux') }}</td>
+            <td data-platform="android">{{ browser_platform_support(browser, 'htc_vive', 'android') }}</td>
+            <td data-platform="ios">{{ browser_platform_support(browser, 'htc_vive', 'ios') }}</td>
+          </tr>
+          <tr data-headset="oculus_rift">
+            <th><a class="no-underline" href="{{ headsets.oculus_rift.about }}"><span class="hidden-text">{{ headsets.oculus_rift.name }}</span></a></th>
+            <td data-platform="windows">{{ browser_platform_support(browser, 'oculus_rift', 'windows') }}</td>
+            <td data-platform="mac">{{ browser_platform_support(browser, 'oculus_rift', 'mac') }}</td>
+            <td data-platform="linux">{{ browser_platform_support(browser, 'oculus_rift', 'linux') }}</td>
+            <td data-platform="android">{{ browser_platform_support(browser, 'oculus_rift', 'android') }}</td>
+            <td data-platform="ios">{{ browser_platform_support(browser, 'oculus_rift', 'ios') }}</td>
+          </tr>
+          <tr data-headset="samsung_gear_vr">
+            <th><a class="no-underline" href="{{ headsets.samsung_gear_vr.about }}"><span class="hidden-text">{{ headsets.samsung_gear_vr.name }}</span></a></th>
+            <td data-platform="windows">{{ browser_platform_support(browser, 'samsung_gear_vr', 'windows') }}</td>
+            <td data-platform="mac">{{ browser_platform_support(browser, 'samsung_gear_vr', 'mac') }}</td>
+            <td data-platform="linux">{{ browser_platform_support(browser, 'samsung_gear_vr', 'linux') }}</td>
+            <td data-platform="android">{{ browser_platform_support(browser, 'samsung_gear_vr', 'android') }}</td>
+            <td data-platform="ios">{{ browser_platform_support(browser, 'samsung_gear_vr', 'ios') }}</td>
+          </tr>
+          <tr data-headset="google_daydream">
+            <th><a class="no-underline" href="{{ headsets.google_daydream.about }}"><span class="hidden-text">{{ headsets.google_daydream.name }}</span></a></th>
+            <td data-platform="windows">{{ browser_platform_support(browser, 'google_daydream', 'windows') }}</td>
+            <td data-platform="mac">{{ browser_platform_support(browser, 'google_daydream', 'mac') }}</td>
+            <td data-platform="linux">{{ browser_platform_support(browser, 'google_daydream', 'linux') }}</td>
+            <td data-platform="android">{{ browser_platform_support(browser, 'google_daydream', 'android') }}</td>
+            <td data-platform="ios">{{ browser_platform_support(browser, 'google_daydream', 'ios') }}</td>
+          </tr>
+          <tr data-headset="google_cardboard">
+            <th><a class="no-underline" href="{{ headsets.google_cardboard.about }}"><span class="hidden-text">{{ headsets.google_cardboard.name }}</span></a></th>
+            <td data-platform="windows">{{ browser_platform_support(browser, 'google_cardboard', 'windows') }}</td>
+            <td data-platform="mac">{{ browser_platform_support(browser, 'google_cardboard', 'mac') }}</td>
+            <td data-platform="linux">{{ browser_platform_support(browser, 'google_cardboard', 'linux') }}</td>
+            <td data-platform="android">{{ browser_platform_support(browser, 'google_cardboard', 'android') }}</td>
+            <td data-platform="ios">{{ browser_platform_support(browser, 'google_cardboard', 'ios') }}</td>
+          </tr>
+          <tr data-headset="windows_mixed_reality">
+            <th><a class="no-underline" href="{{ headsets.windows_mixed_reality.about }}"><span class="hidden-text">{{ headsets.windows_mixed_reality.name }} headsets</span></a></th>
+            <td data-platform="windows">{{ browser_platform_support(browser, 'windows_mixed_reality', 'windows') }}</td>
+            <td data-platform="mac">{{ browser_platform_support(browser, 'windows_mixed_reality', 'mac') }}</td>
+            <td data-platform="linux">{{ browser_platform_support(browser, 'windows_mixed_reality', 'linux') }}</td>
+            <td data-platform="android">{{ browser_platform_support(browser, 'windows_mixed_reality', 'android') }}</td>
+            <td data-platform="ios">{{ browser_platform_support(browser, 'windows_mixed_reality', 'ios') }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </li>
+{% endmacro %}
+
+{% macro compat_report_row (report) %}
+  {% if (report.type == 'bug' or report.type == 'feature') and report.enabled != false %}
+    <tr data-report-type="{{ report.type }}"
+        itemprop="{{ report.type }}"
+        class="{{ 'table-cell-success' if report.status|lower == 'fixed' else ('table-cell-error' if report.type == 'bug' else 'table-cell-alert') }}"
+        data-archived="{{ 'true' if report.archived else 'false' }}">
+      <td data-report-key="description"><a href="{{ report.bug or report.bugUrl or report.url }}" itemprop="description">{{ report.description }}</a></td>
+      {% if report.browserUserAgent %}
+        <td data-report-key="browserVersion">{% if report.type == 'bug' %}<span itemprop="userAgent" title="{{ report.browserUserAgent }}">{{ report.browserVersion }} <br> <small title="{{ report.browserDate }}">({{ report.browserDate }})</small></span>{% endif %}</td>
+      {% endif %}
+      <td data-report-key="browserBuildId"><span itemprop="buildId">{{ report.browserDate }}</span></td>
+      <td data-report-key="headsets">
+        {% if report.headsets %}
+          <span itemprop="headsets">
+            {% for headset_slug in report.headsets %}
+              {% set headset = headsets[headset_slug] %}
+              {{ headset.name }}{% if not loop.last %}, {% endif %}
+            {% endfor %}
+          </span>
+        {% endif %}
+      </td>
+      <td data-report-key="dateReported"><time itemprop="dateReported" datetime="{{ report.dateReported.datetime }}">{{ report.dateReported.pretty or report.dateReported.dateString }}</time></td>
+      <td data-report-key="dateUpdated"><time itemprop="dateUpdated" datetime="{{ report.dateUpdated.datetime }}">{{ report.dateUpdated.pretty or report.dateUpdated.dateString }}</time></td>
+      <td data-report-key="status"><span itemprop="status">{{ report.status }}</span></td>
+    </tr>
+  {% endif %}
+{% endmacro %}
+
+{% macro youtube (video_id, opts) %}
+  {% set width = opts.width or 560 %}
+  {% set height = opts.height or 315 %}
+  {% set classes = opts.classes or opts.class or opts.className or '' %}
+  {% set id = opts.id or opts.videoId or opts.video_id or '' %}
+  <div class="iframe-container{% if classes %} {{ classes }}{% endif %}"{% if id %} id="{{ id }}"{% endif %}>
+    <iframe id="yt-{{ video_id }}" class="iframe" width="{{ width }}" height="{{ height }}" src="https://www.youtube.com/embed/{{ video_id }}?enablejsapi=1&amp;origin=https://webvr.rocks" frameborder="0" allowfullscreen="true"></iframe>
+    <!-- style="background-image: url(https://img.youtube.com/vi/{{ video_id }}/0.jpg)" -->
+  </div>
+{% endmacro %}
+
+{% macro bugs_bar (browser) %}
+  {% if browser.bugsUrl or browser.bugsReportUrl %}
+    <p>
+      {%- if browser.bugsUrl -%}
+        <a class="button button-outlined-neutral button-small button-bugs button-bugs-list" href="{{ browser.bugsUrl }}">View list of bugs</a>
+      {%- endif -%}
+      {%- if browser.bugsReportUrl %} <a class="button button-outlined-warn button-small button-bugs button-bugs-report" href="{{ browser.bugsReportUrl }}">Report a bug</a>
+      {%- endif -%}
+    </p>
+  {% endif %}
+{% endmacro %}
